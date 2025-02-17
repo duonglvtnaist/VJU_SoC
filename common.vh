@@ -17,7 +17,7 @@
 `define OP_SLT                  3'b110
 `define OP_XOR                  3'b111
 
-`define COUNTER_WIDTH           10
+`define COUNTER_WIDTH           11
 
 // For AXI4
 

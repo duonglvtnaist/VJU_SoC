@@ -4,15 +4,15 @@
 `include "common.vh"
 
 module tb_top_processor ();
-    
+
     reg [`DATA_WIDTH-1:0] data_i;
     reg [`ADDR_WIDTH-1:0] addr_data_i;
     reg                   ena_data_a_i;
     reg                   wea_data_a_i;
     reg                   ena_data_b_i;
     reg                   wea_data_b_i;
-    reg                   wea_data_o_i;
-    reg                   ena_data_o_i;
+    reg                   wea_data_result_i;
+    reg                   ena_data_result_i;
     wire [`DATA_WIDTH-1:0]data_o;
     reg [`OP_WIDTH-1:0]   op_i;
     reg [`ADDR_WIDTH-1:0] addr_op_i;
@@ -32,8 +32,8 @@ module tb_top_processor ();
         .wea_data_a_i       (wea_data_a_i),
         .ena_data_b_i       (ena_data_b_i),
         .wea_data_b_i       (wea_data_b_i),
-        .wea_data_o_i       (wea_data_o_i),
-        .ena_data_o_i       (ena_data_o_i),
+        .wea_data_result_i       (wea_data_result_i),
+        .ena_data_result_i       (ena_data_result_i),
         .data_o             (data_o),
         .op_i               (op_i),
         .addr_op_i          (addr_op_i),
@@ -55,7 +55,7 @@ module tb_top_processor ();
 
     // Main testbench
 
-    task write_data (input [`DATA_WIDTH-1:0] data, input [`ADDR_WIDTH-1:0] addr, input [`MASK_ADDR_WIDTH-1:0] mask); 
+    task write_data (input [`DATA_WIDTH-1:0] data, input [`ADDR_WIDTH-1:0] addr, input [`MASK_ADDR_WIDTH-1:0] mask);
         begin
             data_i = data;
             addr_data_i = addr;
@@ -64,38 +64,40 @@ module tb_top_processor ();
                 wea_data_a_i = 1;
                 ena_data_b_i = 0;
                 wea_data_b_i = 0;
-                ena_data_o_i = 0;
-                wea_data_o_i = 0;
+                ena_data_result_i = 0;
+                wea_data_result_i = 0;
             end
             else if (mask == `SEL_B) begin
                 ena_data_a_i = 0;
                 wea_data_a_i = 0;
                 ena_data_b_i = 1;
                 wea_data_b_i = 1;
-                ena_data_o_i = 0;
-                wea_data_o_i = 0;
+                ena_data_result_i = 0;
+                wea_data_result_i = 0;
             end
             else if (mask == `SEL_OUT) begin
                 ena_data_a_i = 0;
                 wea_data_a_i = 0;
                 ena_data_b_i = 0;
                 wea_data_b_i = 0;
-                ena_data_o_i = 1;
-                wea_data_o_i = 1;
+                ena_data_result_i = 1;
+                wea_data_result_i = 1;
             end
             else begin
                 ena_data_a_i = 0;
                 wea_data_a_i = 0;
                 ena_data_b_i = 0;
                 wea_data_b_i = 0;
-                ena_data_o_i = 0;
-                wea_data_o_i = 0;
+                ena_data_result_i = 0;
+                wea_data_result_i = 0;
             end
-            ena_data_a_i = 1;
-            wea_data_a_i = 1;
             #(CLK_PERIOD)
             ena_data_a_i = 0;
             wea_data_a_i = 0;
+            ena_data_b_i = 0;
+            wea_data_b_i = 0;
+            ena_data_result_i = 0;
+            wea_data_result_i = 0;
         end
     endtask
 
@@ -114,12 +116,12 @@ module tb_top_processor ();
     task read_data (input [`ADDR_WIDTH-1:0] addr);
         begin
             addr_data_i = addr;
-            ena_data_o_i = 1;
-            wea_data_o_i = 0;
+            ena_data_result_i = 1;
+            wea_data_result_i = 0;
             #(CLK_PERIOD)
             $display("Data at address %d: %d", addr, data_o);
-            ena_data_o_i = 0;
-            wea_data_o_i = 0;
+            ena_data_result_i = 0;
+            wea_data_result_i = 0;
         end
     endtask
 
@@ -132,8 +134,8 @@ module tb_top_processor ();
         wea_data_a_i    = 0;
         ena_data_b_i    = 0;
         wea_data_b_i    = 0;
-        wea_data_o_i    = 0;
-        ena_data_o_i    = 0;
+        wea_data_result_i    = 0;
+        ena_data_result_i    = 0;
         op_i            = 0;
         addr_data_i     = 0;
         addr_op_i       = 0;
@@ -144,7 +146,7 @@ module tb_top_processor ();
         #(CLK_PERIOD*100) RST = 1;
 
         // Fill data A
-        #(CLK_PERIOD*10) 
+        #(CLK_PERIOD*10)
         for (i = 0; i < 1024; i = i + 1) begin
             write_data(.data(`DATA_WIDTH'd1), .addr(i), .mask(`SEL_A));
         end
@@ -155,8 +157,29 @@ module tb_top_processor ();
         end
         // Write operations
         #(CLK_PERIOD*10)
-        for (i = 0; i < 1024; i = i + 1) begin
+        for (i = 0; i < 128; i = i + 1) begin
             write_op(`OP_ADD, i);
+        end
+        for (i = 128; i < 256; i = i + 1) begin
+            write_op(`OP_SUB, i);
+        end
+        for (i = 256; i < 384; i = i + 1) begin
+            write_op(`OP_AND, i);
+        end
+        for (i = 384; i < 512; i = i + 1) begin
+            write_op(`OP_OR, i);
+        end
+        for (i = 512; i < 640; i = i + 1) begin
+            write_op(`OP_SLL, i);
+        end
+        for (i = 640; i < 768; i = i + 1) begin
+            write_op(`OP_SRL, i);
+        end
+        for (i = 768; i < 896; i = i + 1) begin
+            write_op(`OP_SLT, i);
+        end
+        for (i = 896; i < 1024; i = i + 1) begin
+            write_op(`OP_XOR, i);
         end
         // Start operation
         #(CLK_PERIOD*10)
