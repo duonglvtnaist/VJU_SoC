@@ -10,8 +10,8 @@ module top_processor (
     input   wire                    wea_data_a_i,
     input   wire                    ena_data_b_i,
     input   wire                    wea_data_b_i,
-    input   wire                    wea_data_o_i,
-    input   wire                    ena_data_o_i,
+    input   wire                    wea_data_result_i,
+    input   wire                    ena_data_result_i,
     output  wire [`DATA_WIDTH-1:0]  data_o,
     input   wire [`OP_WIDTH-1:0]    op_i,
     input   wire [`ADDR_WIDTH-1:0]  addr_op_i,
@@ -27,13 +27,13 @@ module top_processor (
 
     // BRAM for data A and output
 
-    wire [`DATA_WIDTH-1:0] data_a_w;
-    wire [`DATA_WIDTH-1:0] data_b_w;
+    wire [`DATA_WIDTH-1:0] data_a_o_w;
+    wire [`DATA_WIDTH-1:0] data_b_o_w;
 
     wire [`DATA_WIDTH-1:0] data_alu_o_w;
 
 
-    
+
 
     BRAM_1024x32b bram_a (
         .clka(CLK),
@@ -41,7 +41,7 @@ module top_processor (
         .ena(ena_data_a_i),
         .addra(addr_data_i),
         .dina(data_i),
-        .douta(data_a_w)
+        .douta(data_a_o_w)
     );
 
     // BRAM for data B
@@ -52,37 +52,39 @@ module top_processor (
         .ena(ena_data_b_i),
         .addra(addr_data_i),
         .dina(data_i),
-        .douta(data_b_w)
+        .douta(data_b_o_w)
     );
 
     // BRAM for output
 
-    wire wea_data_o_w, ena_data_o_w;
-    reg  wea_data_o_r, ena_data_o_r;
 
-    assign wea_data_o_w = wea_data_o_r;
-    assign ena_data_o_w = ena_data_o_r;
+    wire wea_data_result_w, ena_data_result_w;
+    reg  wea_data_result_r, ena_data_result_r;
 
-    wire sel_mem_w, wea_data_o_main_w, ena_data_o_main_w;
+    assign wea_data_result_w = wea_data_result_r;
+    assign ena_data_result_w = ena_data_result_r;
+
+    wire sel_mem_w, wea_data_result_main_w, ena_data_result_main_w;
     reg  sel_mem_r;
 
     assign sel_mem_w = sel_mem_r;
 
-    assign wea_data_o_main_w = sel_mem_w ? wea_data_o_w : wea_data_o_i;
-    assign ena_data_o_main_w = sel_mem_w ? ena_data_o_w : ena_data_o_i;
+    assign wea_data_result_main_w = sel_mem_w ? wea_data_result_w : wea_data_result_i;
+    assign ena_data_result_main_w = sel_mem_w ? ena_data_result_w : ena_data_result_i;
 
     wire [`DATA_WIDTH-1:0] data_o_w;
 
-    assign data_o_w = {22'd0, counter_o_w} + data_alu_o_w;
+    wire [`COUNTER_WIDTH-1:0]   counter_o_w;
+    assign data_o_w = data_alu_o_w;
 
     wire [`ADDR_WIDTH-1:0] addr_data_o_w;
 
-    assign addr_data_o_w = sel_mem_w ? counter_o_w : addr_data_i;
+    assign addr_data_o_w = sel_mem_w ? (counter_o_w-1) : addr_data_i;
 
     BRAM_1024x32b bram_o (
         .clka(CLK),
-        .wea(wea_data_o_main_w),
-        .ena(ena_data_o_main_w),
+        .wea(wea_data_result_main_w),
+        .ena(ena_data_result_main_w),
         .addra(addr_data_o_w),
         .dina(data_o_w),
         .douta(data_o)
@@ -93,7 +95,7 @@ module top_processor (
     wire [`OP_WIDTH-1:0]                op_w;
     wire [`MEM_OP_WIDTH-1:0]            op_o_w;
 
-    assign op_w = op_o_w[2:0];     
+    assign op_w = op_o_w[2:0];
 
     wire wea_op_w, ena_op_w, wea_op_sel_w, ena_op_sel_w;
     reg  wea_op_r, ena_op_r;
@@ -107,12 +109,13 @@ module top_processor (
     wire [`MEM_OP_WIDTH-1:0] op_i_w;
 
     assign op_i_w = {13'b0, op_i};
-
+    wire [`ADDR_WIDTH-1:0]  addr_op_sel;
+    assign addr_op_sel = sel_mem_w ? counter_o_w : addr_op_i;
     BRAM_1024x16b bram_op (
         .clka(CLK),
-        .wea(wea_op_i),
-        .ena(ena_op_i),
-        .addra(addr_op_i),
+        .wea(wea_op_sel_w),
+        .ena(ena_op_sel_w),
+        .addra(addr_op_sel),
         .dina(op_i_w),
         .douta(op_o_w)
     );
@@ -121,7 +124,7 @@ module top_processor (
 
     wire                        counter_increment_w;
     reg                         counter_increment_r;
-    wire [`COUNTER_WIDTH-1:0]   counter_o_w;
+
 
     assign counter_increment_w = counter_increment_r;
 
@@ -135,8 +138,8 @@ module top_processor (
     // Instance of ALU
 
     ALU alu (
-        .A_i(data_a_w),
-        .B_i(data_b_w),
+        .A_i(data_a_o_w),
+        .B_i(data_b_o_w),
         .Op_i(op_w),
         .Out_o(data_alu_o_w)
     );
@@ -171,7 +174,7 @@ module top_processor (
                     next_state_r = S0_IDLE;
             end
             S1_EXEC: begin
-                if (counter_o_w == `COUNTER_WIDTH'd1023)
+                if (counter_o_w == 11'd1024)
                     next_state_r = S2_DONE;
                 else
                     next_state_r = S1_EXEC;
@@ -185,9 +188,9 @@ module top_processor (
             default: begin
                 next_state_r = S0_IDLE;
             end
-        
+
         endcase
-    
+
     end
 
     // Control output logic
@@ -201,8 +204,8 @@ module top_processor (
             S0_IDLE: begin
                 done_r              = 1'b0;
                 counter_increment_r = 1'b0;
-                wea_data_o_r        = 1'b0;
-                ena_data_o_r        = 1'b0;
+                wea_data_result_r        = 1'b0;
+                ena_data_result_r        = 1'b0;
                 wea_op_r            = 1'b0;
                 ena_op_r            = 1'b0;
                 sel_mem_r           = 1'b0;
@@ -210,17 +213,17 @@ module top_processor (
             S1_EXEC: begin
                 done_r              = 1'b0;
                 counter_increment_r = 1'b1;
-                wea_data_o_r        = 1'b1;
-                ena_data_o_r        = 1'b1;
-                wea_op_r            = 1'b1;
+                wea_data_result_r        = 1'b1;
+                ena_data_result_r        = 1'b1;
+                wea_op_r            = 1'b0;
                 ena_op_r            = 1'b1;
                 sel_mem_r           = 1'b1;
             end
             S2_DONE: begin
                 done_r              = 1'b1;
                 counter_increment_r = 1'b0;
-                wea_data_o_r        = 1'b0;
-                ena_data_o_r        = 1'b0;
+                wea_data_result_r        = 1'b0;
+                ena_data_result_r        = 1'b0;
                 wea_op_r            = 1'b0;
                 ena_op_r            = 1'b0;
                 sel_mem_r           = 1'b0;
@@ -229,12 +232,12 @@ module top_processor (
             default: begin
                 done_r              = 1'b0;
                 counter_increment_r = 1'b0;
-                wea_data_o_r        = 1'b0;
-                ena_data_o_r        = 1'b0;
+                wea_data_result_r        = 1'b0;
+                ena_data_result_r        = 1'b0;
                 wea_op_r            = 1'b0;
                 ena_op_r            = 1'b0;
                 sel_mem_r           = 1'b0;
-            end   
+            end
         endcase
     end
 
