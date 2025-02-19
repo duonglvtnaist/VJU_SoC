@@ -1,7 +1,9 @@
 // Author: Le Vu Trung Duong
 // Nara Institute of Science and Technology
 // Description: Testbench for top_processor with no AXI4 interface
+
 `include "common.vh"
+`timescale 1ns/1ps
 
 module tb_top_processor ();
 
