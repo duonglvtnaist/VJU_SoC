@@ -16,6 +16,4 @@ module ALU(
                       (Op_i == `OP_SRL) ? A_i >> B_i[4:0] : // R-type: srl
                       (Op_i == `OP_SLT) ? (A_i < B_i) ? 1 : 0 : // I-type: slt
                       (Op_i == `OP_XOR) ? A_i ^ B_i : 0; // R-type: xor
-    
-
 endmodule

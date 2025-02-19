@@ -169,7 +169,6 @@ module AXI_Manager #
 
 	// AXI4FULL signals
 	reg  [`AXI_DATA_WIDTH-1:0]						done_r;
-	wire [`AXI_DATA_WIDTH-1:0]         				DMA_douta_w;
 	reg  [C_S_AXI_ADDR_WIDTH-1 : 0]                 S_AXI_ARADDR_r;
 	reg  [C_S_AXI_ADDR_WIDTH-1 : 0] 				axi_awaddr;
 	reg  											axi_awready;
@@ -243,7 +242,7 @@ module AXI_Manager #
 	assign S_AXI_BVALID		= axi_bvalid;
 	//assign S_AXI_ARREADY	= axi_arready;
 	//assign S_AXI_RDATA	= axi_rdata;
-	assign S_AXI_RDATA		= (S_AXI_ARADDR_r == `AXI_DONE_ADDR)? AXI_done_w : DMA_douta_w;
+	assign S_AXI_RDATA		= (S_AXI_ARADDR_r == `AXI_DONE_ADDR)? AXI_done_w : AXI_data_o_w;
 	//assign S_AXI_RRESP	= axi_rresp;
 	//assign S_AXI_RLAST	= axi_rlast;
 	assign S_AXI_RUSER		= axi_ruser;
@@ -740,13 +739,12 @@ module AXI_Manager #
 	   	end
 	   	else begin
 			// Write channel
-			AXI_addra_r 		<= axi_awaddr[ADDR_LSB+`ADDR_WIDTH-1:ADDR_LSB];
+			AXI_addra_r 		<= axi_awaddr[ADDR_LSB+`ADDR_WIDTH-1:ADDR_LSB]; // load data address
 			AXI_dina_r 			<= S_AXI_WDATA;
-			AXI_addr_op_r 		<= axi_awaddr[ADDR_LSB+`ADDR_WIDTH-1:ADDR_LSB];
+			AXI_addr_op_r 		<= axi_awaddr[ADDR_LSB+`ADDR_WIDTH-1:ADDR_LSB]; // load operation address
 			AXI_op_r 			<= S_AXI_WDATA[`OP_WIDTH-1:0];
-			// Check write channel
-			if(S_AXI_WREADY && axi_awv_awr_flag && (axi_awaddr[39:36] == `AXI_TRANSFER_MASK)) begin
-				
+			// Check write channel to control the write enable and enable signals
+			if(S_AXI_WREADY && axi_awv_awr_flag && (axi_awaddr[39:24] == `AXI_TRANSFER_MASK)) begin
 				case (axi_awaddr[`AXI_TRANSFER_MODE_WIDTH+ADDR_LSB+`ADDR_WIDTH-1:`ADDR_WIDTH+ ADDR_LSB])
 					`AXI_TRANSFER_A_MASK: begin
 						// Write data A
@@ -805,10 +803,8 @@ module AXI_Manager #
 				endcase
 			end
 			// Check read channel: Only allow to read output
-			else if (axi_arv_arr_flag && (axi_araddr[39:36] == `AXI_TRANSFER_MASK)) begin
-				case (axi_araddr[`AXI_TRANSFER_MODE_WIDTH+ADDR_LSB+`ADDR_WIDTH-1:`ADDR_WIDTH+ ADDR_LSB])
-					`AXI_TRANSFER_O_MASK: begin
-						// Read data O
+			else if (S_AXI_RREADY && axi_arv_arr_flag && (axi_araddr[39:12] == 28'h04_8100_3)) begin
+
 						AXI_ena_data_a_r <= 1'b0;
 						AXI_wea_data_a_r <= 1'b0;
 						AXI_ena_data_b_r <= 1'b0;
@@ -817,8 +813,8 @@ module AXI_Manager #
 						AXI_wea_data_o_r <= ~axi_arv_arr_flag;
 						AXI_ena_op_r 	 <= 1'b0;
 						AXI_wea_op_r 	 <= 1'b0;
-					end
-					default: begin
+			end
+			else begin
 						AXI_ena_data_a_r <= 1'b0;
 						AXI_wea_data_a_r <= 1'b0;
 						AXI_ena_data_b_r <= 1'b0;
@@ -827,11 +823,11 @@ module AXI_Manager #
 						AXI_wea_data_o_r <= 1'b0;
 						AXI_ena_op_r 	 <= 1'b0;
 						AXI_wea_op_r 	 <= 1'b0;
-					end
-				endcase
+				end
+				
 			end	
-	  	end
 	end
+
 
 	
 	
@@ -866,7 +862,12 @@ always @(posedge S_AXI_ACLK or negedge S_AXI_ARESETN) begin
 		end 
 		else
 		begin     
-			AXI_done_r <= {{(`AXI_DATA_WIDTH-1){1'b0}}, done_w};                   
+			if(done_w)
+				AXI_done_r <= {{(`AXI_DATA_WIDTH-1){1'b0}}, done_w}; 
+			else if(AXI_start_w==32'b1)
+				AXI_done_r <= 32'b0;
+			else
+			    AXI_done_r <= AXI_done_w;              
 		end
 	end
 
@@ -879,8 +880,8 @@ always @(posedge S_AXI_ACLK or negedge S_AXI_ARESETN) begin
 		.wea_data_a_i         		(AXI_wea_data_a_w),
 		.ena_data_b_i         		(AXI_ena_data_b_w),
 		.wea_data_b_i         		(AXI_wea_data_b_w),
-		.wea_data_o_i         		(AXI_wea_data_o_w),
-		.ena_data_o_i         		(AXI_ena_data_o_w),
+		.wea_data_result_i         	(AXI_wea_data_o_w),
+		.ena_data_result_i         	(AXI_ena_data_o_w),
 		.data_o               		(AXI_data_o_w),
 		.op_i                 		(AXI_op_w),
 		.addr_op_i            		(AXI_addr_op_w),
@@ -893,29 +894,30 @@ always @(posedge S_AXI_ACLK or negedge S_AXI_ARESETN) begin
 
 	);
  	
-	// ila_axi ila_axi(
-	// 	.clk		(S_AXI_ACLK),			// 1 bit
-	// 	.probe0		(AXI_start_w),			// 1 bit
-	// 	.probe1		(AXI_addra_w),			// 10 bits
-	// 	.probe3		(AXI_ena_data_a_w),		// 1 bit
-	// 	.probe4		(AXI_wea_data_a_w),		// 1 bit
-	// 	.probe5		(AXI_ena_data_b_w),		// 1 bit
-	// 	.probe6		(AXI_wea_data_b_w),		// 1 bit
-	// 	.probe7		(AXI_wea_data_o_w),		// 1 bit
-	// 	.probe8		(AXI_ena_data_o_w),		// 1 bit
-	// 	.probe9		(AXI_op_w),				// 16 bits
-	// 	.probe10	(AXI_addr_op_w),		// 10 bits
-	// 	.probe11	(AXI_ena_op_w),			// 1 bit
-	// 	.probe12	(AXI_wea_op_w),			// 1 bit
-	// 	.probe13	(AXI_done_w),			// 32 bits
-	// 	.probe14	(axi_awaddr),			// 40 bits
-	// 	.probe15	(axi_araddr),			// 40 bits
-	// 	.probe16	(axi_awv_awr_flag),		// 1 bit
-	// 	.probe17	(axi_arv_arr_flag),		// 1 bit
-	// 	.probe18	(AXI_done_w),			// 32 bits
-	// 	.probe19	(S_AXI_WDATA),			// 32 bits
-	// 	.probe20	(S_AXI_RDATA)			// 32 bits
-	// );
+	 ila_axi ila_axi(
+	 	.clk		(S_AXI_ACLK),			// 1 bit
+	 	
+	 	.probe0		(AXI_start_w),			// 1 bit
+	 	.probe1		(AXI_addra_w),			// 10 bits
+	 	.probe2		(AXI_ena_data_a_w),		// 1 bit
+	 	.probe3		(AXI_wea_data_a_w),		// 1 bit
+	 	.probe4		(AXI_ena_data_b_w),		// 1 bit
+	 	.probe5		(AXI_wea_data_b_w),		// 1 bit
+	 	.probe6		(AXI_wea_data_o_w),		// 1 bit
+	 	.probe7		(AXI_ena_data_o_w),		// 1 bit
+	 	.probe8		(AXI_op_w),				// 16 bits
+	 	.probe9	    (AXI_addr_op_w),		// 10 bits
+	 	.probe10	(AXI_ena_op_w),			// 1 bit
+	 	.probe11	(AXI_wea_op_w),			// 1 bit
+	 	.probe12	(AXI_done_w),			// 32 bits
+	 	.probe13	(axi_awaddr),			// 40 bits
+	 	.probe14	(axi_araddr),			// 40 bits
+	 	.probe15	(axi_awv_awr_flag),		// 1 bit
+	 	.probe16	(axi_arv_arr_flag),		// 1 bit
+	 	.probe17	(AXI_done_w),			// 32 bits
+	 	.probe18	(S_AXI_WDATA),			// 32 bits
+	 	.probe19	(S_AXI_RDATA)			// 32 bits
+	 );
 	// User logic ends
 
 

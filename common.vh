@@ -17,18 +17,28 @@
 `define OP_SLT                  3'b110
 `define OP_XOR                  3'b111
 
-`define COUNTER_WIDTH           11
+`define COUNTER_WIDTH           10
 
 // For AXI4
+`define ZCU102
+`ifdef ZCU102
+    `define AXI_DONE_ADDR           40'h04_0004_0000
+    `define AXI_START_ADDR          40'h04_0008_0000
+    `define AXI_TRANSFER_MASK       16'h04_81
+    `define AXI_PIO_MASK            16'h04_00
+`endif
+`ifdef KV260
+    `define AXI_DONE_ADDR           40'h00_A004_0000
+    `define AXI_START_ADDR          40'h00_A008_0000
+    `define AXI_TRANSFER_MASK       16'h00_A
+`endif
 
-`define AXI_DONE_ADDR           40'h40_0001_0000
-`define AXI_START_ADDR          40'h40_0002_0000
-`define AXI_DATA_WIDTH          32
-`define AXI_TRANSFER_MODE_WIDTH 2
+`define AXI_DATA_WIDTH              32
+`define AXI_TRANSFER_MODE_WIDTH     2
 
-`define AXI_TRANSFER_MASK       4'h4
-`define AXI_TRANSFER_A_MASK     2'd0
-`define AXI_TRANSFER_B_MASK     2'd1
-`define AXI_TRANSFER_O_MASK     2'd2
-`define AXI_TRANSFER_OP_MASK    2'd3
+
+`define AXI_TRANSFER_A_MASK         2'd0
+`define AXI_TRANSFER_B_MASK         2'd1
+`define AXI_TRANSFER_O_MASK         2'd2
+`define AXI_TRANSFER_OP_MASK        2'd3
 

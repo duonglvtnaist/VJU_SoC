@@ -119,7 +119,7 @@ module tb_top_processor ();
             ena_data_result_i = 1;
             wea_data_result_i = 0;
             #(CLK_PERIOD)
-            $display("Data at address %d: %d", addr, data_o);
+            $display("Data at address %d: %h", addr, data_o);
             ena_data_result_i = 0;
             wea_data_result_i = 0;
         end

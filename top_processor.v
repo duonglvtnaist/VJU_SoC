@@ -89,7 +89,16 @@ module top_processor (
         .dina(data_o_w),
         .douta(data_o)
     );
+    
+    ila_bram_o ila_bram_o(
+	 	.clk		(CLK),			           // 1 bit
+	 	.probe0		(wea_data_result_main_w),  // 1 bit
+	 	.probe1		(ena_data_result_main_w),  // 1 bits
+	 	.probe2		(addr_data_o_w),		   // 10 bit
+	 	.probe3		(data_o_w),		           // 32 bit
+	 	.probe4		(data_o)		           // 32 bit
 
+	 );
     // BRAM for operation
 
     wire [`OP_WIDTH-1:0]                op_w;
@@ -143,6 +152,19 @@ module top_processor (
         .Op_i(op_w),
         .Out_o(data_alu_o_w)
     );
+    
+    ila_top ila_top(
+	 	.clk		(CLK),			            // 1 bit
+	 	
+	 	.probe0		(data_a_o_w),			    // 32 bit
+	 	.probe1		(data_b_o_w),			    // 32 bits
+	 	.probe2		(op_w),		                // 3 bit
+	 	.probe3		(data_alu_o_w),		        // 32 bit
+	 	.probe4		(counter_increment_w),		// 1 bit
+	 	.probe5		(counter_o_w),		        // 10 bit
+	 	.probe6     (start_i),                  // 1 bit
+	 	.probe7     (done_o)                    // 1 bit
+	 );
 
     // FSM
 
@@ -174,7 +196,7 @@ module top_processor (
                     next_state_r = S0_IDLE;
             end
             S1_EXEC: begin
-                if (counter_o_w == 11'd1024)
+                if (counter_o_w == 10'd1023)
                     next_state_r = S2_DONE;
                 else
                     next_state_r = S1_EXEC;
@@ -241,5 +263,5 @@ module top_processor (
         endcase
     end
 
-
+    
 endmodule
