@@ -91,13 +91,14 @@ module top_processor (
     );
     
     ila_bram_o ila_bram_o(
-	 	.clk		(CLK),			           // 1 bit
+	 	.clk		(CLK),			           
 	 	.probe0		(wea_data_result_main_w),  // 1 bit
 	 	.probe1		(ena_data_result_main_w),  // 1 bits
 	 	.probe2		(addr_data_o_w),		   // 10 bit
 	 	.probe3		(data_o_w),		           // 32 bit
-	 	.probe4		(data_o)		           // 32 bit
-
+	 	.probe4		(data_o),     	           // 32 bit
+	 	.probe5     (start_i),                 // 1 bit
+        .probe6     (done_o)                   // 1 bit
 	 );
     // BRAM for operation
 

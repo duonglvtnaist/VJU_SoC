@@ -15,9 +15,9 @@ module AXI_Manager #
 		// Width of ID for for write address, write data, read address and read data
 		parameter integer C_S_AXI_ID_WIDTH	= 1,
 		// Width of S_AXI data bus
-		parameter integer C_S_AXI_DATA_WIDTH	= 32,
+		parameter integer C_S_AXI_DATA_WIDTH	= 32,  // Diều chỉnh độ rộng dữ liệu
 		// Width of S_AXI address bus
-		parameter integer C_S_AXI_ADDR_WIDTH	= 40,
+		parameter integer C_S_AXI_ADDR_WIDTH	= 40,  // Điều chỉnh độ rộng địa chỉ
 		// Width of optional user defined signal in write address channel
 		parameter integer C_S_AXI_AWUSER_WIDTH	= 0,
 		// Width of optional user defined signal in read address channel
@@ -219,7 +219,7 @@ module AXI_Manager #
 
 //	localparam integer ADDR_LSB = (C_S_AXI_DATA_WIDTH/32)+ 1;
     //localparam integer ADDR_LSB = C_S_AXI_DATA_WIDTH/32;
-	localparam integer ADDR_LSB = 2;								
+	localparam integer ADDR_LSB = 2;	// Số bit bỏ đi tương ứng với số byte thể hiện độ rộng dữ liệu.				
 	localparam integer OPT_MEM_ADDR_BITS = 12;
 	localparam integer USER_NUM_MEM = 256;
 	//----------------------------------------------
@@ -241,7 +241,8 @@ module AXI_Manager #
 	assign S_AXI_BUSER		= axi_buser;
 	assign S_AXI_BVALID		= axi_bvalid;
 	//assign S_AXI_ARREADY	= axi_arready;
-	//assign S_AXI_RDATA	= axi_rdata;
+	//assign S_AXI_RDATA	= axi_rdata; 
+	// Xác định dữ liệu trả về cho master (Vì S_AXI_RDATA delay 1 clock cycle nên cần tạo 1 biến trung gian để lưu trữ địa chỉ đọc delay 1 clock cycle)
 	assign S_AXI_RDATA		= (S_AXI_ARADDR_r == `AXI_DONE_ADDR)? AXI_done_w : AXI_data_o_w;
 	//assign S_AXI_RRESP	= axi_rresp;
 	//assign S_AXI_RLAST	= axi_rlast;
@@ -739,12 +740,13 @@ module AXI_Manager #
 	   	end
 	   	else begin
 			// Write channel
-			AXI_addra_r 		<= axi_awaddr[ADDR_LSB+`ADDR_WIDTH-1:ADDR_LSB]; // load data address
+			
 			AXI_dina_r 			<= S_AXI_WDATA;
-			AXI_addr_op_r 		<= axi_awaddr[ADDR_LSB+`ADDR_WIDTH-1:ADDR_LSB]; // load operation address
 			AXI_op_r 			<= S_AXI_WDATA[`OP_WIDTH-1:0];
 			// Check write channel to control the write enable and enable signals
 			if(S_AXI_WREADY && axi_awv_awr_flag && (axi_awaddr[39:24] == `AXI_TRANSFER_MASK)) begin
+				AXI_addra_r 		<= axi_awaddr[ADDR_LSB+`ADDR_WIDTH-1:ADDR_LSB]; // load data address
+				AXI_addr_op_r 		<= axi_awaddr[ADDR_LSB+`ADDR_WIDTH-1:ADDR_LSB]; // load operation address
 				case (axi_awaddr[`AXI_TRANSFER_MODE_WIDTH+ADDR_LSB+`ADDR_WIDTH-1:`ADDR_WIDTH+ ADDR_LSB])
 					`AXI_TRANSFER_A_MASK: begin
 						// Write data A
@@ -803,8 +805,9 @@ module AXI_Manager #
 				endcase
 			end
 			// Check read channel: Only allow to read output
-			else if (S_AXI_RREADY && axi_arv_arr_flag && (axi_araddr[39:12] == 28'h04_8100_3)) begin
-
+			else if (axi_arv_arr_flag && (axi_araddr[39:12] == 28'h04_8100_2)) begin
+				AXI_addra_r 		<= axi_araddr[ADDR_LSB+`ADDR_WIDTH-1:ADDR_LSB]; // load data address
+				AXI_addr_op_r 		<= axi_araddr[ADDR_LSB+`ADDR_WIDTH-1:ADDR_LSB]; // load operation address
 						AXI_ena_data_a_r <= 1'b0;
 						AXI_wea_data_a_r <= 1'b0;
 						AXI_ena_data_b_r <= 1'b0;
@@ -909,7 +912,7 @@ always @(posedge S_AXI_ACLK or negedge S_AXI_ARESETN) begin
 	 	.probe9	    (AXI_addr_op_w),		// 10 bits
 	 	.probe10	(AXI_ena_op_w),			// 1 bit
 	 	.probe11	(AXI_wea_op_w),			// 1 bit
-	 	.probe12	(AXI_done_w),			// 32 bits
+	 	.probe12	(AXI_data_o_w),			// 32 bits
 	 	.probe13	(axi_awaddr),			// 40 bits
 	 	.probe14	(axi_araddr),			// 40 bits
 	 	.probe15	(axi_awv_awr_flag),		// 1 bit

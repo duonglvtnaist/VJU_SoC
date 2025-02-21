@@ -1,9 +1,7 @@
 // Author: Le Vu Trung Duong
 // Nara Institute of Science and Technology
 // Description: Testbench for top_processor with no AXI4 interface
-
 `include "common.vh"
-`timescale 1ns/1ps
 
 module tb_top_processor ();
 
@@ -155,34 +153,38 @@ module tb_top_processor ();
         // Fill data B
         #(CLK_PERIOD*10)
         for (i = 0; i < 1024; i = i + 1) begin
-            write_data(.data(`DATA_WIDTH'd2), .addr(i), .mask(`SEL_B));
+            write_data(.data(`DATA_WIDTH'd5), .addr(i), .mask(`SEL_B));
         end
         // Write operations
         #(CLK_PERIOD*10)
-        for (i = 0; i < 128; i = i + 1) begin
-            write_op(`OP_ADD, i);
+        
+        for (i = 0; i < 1024; i = i + 1) begin
+            write_op(i%8, i);
         end
-        for (i = 128; i < 256; i = i + 1) begin
-            write_op(`OP_SUB, i);
-        end
-        for (i = 256; i < 384; i = i + 1) begin
-            write_op(`OP_AND, i);
-        end
-        for (i = 384; i < 512; i = i + 1) begin
-            write_op(`OP_OR, i);
-        end
-        for (i = 512; i < 640; i = i + 1) begin
-            write_op(`OP_SLL, i);
-        end
-        for (i = 640; i < 768; i = i + 1) begin
-            write_op(`OP_SRL, i);
-        end
-        for (i = 768; i < 896; i = i + 1) begin
-            write_op(`OP_SLT, i);
-        end
-        for (i = 896; i < 1024; i = i + 1) begin
-            write_op(`OP_XOR, i);
-        end
+//        for (i = 0; i < 1024; i = i + 1) begin
+//            write_op(`OP_ADD, i);
+//        end
+//        for (i = 128; i < 256; i = i + 1) begin
+//            write_op(`OP_SUB, i);
+//        end
+//        for (i = 256; i < 384; i = i + 1) begin
+//            write_op(`OP_AND, i);
+//        end
+//        for (i = 384; i < 512; i = i + 1) begin
+//            write_op(`OP_OR, i);
+//        end
+//        for (i = 512; i < 640; i = i + 1) begin
+//            write_op(`OP_SLL, i);
+//        end
+//        for (i = 640; i < 768; i = i + 1) begin
+//            write_op(`OP_SRL, i);
+//        end
+//        for (i = 768; i < 896; i = i + 1) begin
+//            write_op(`OP_SLT, i);
+//        end
+//        for (i = 896; i < 1024; i = i + 1) begin
+//            write_op(`OP_XOR, i);
+//        end
         // Start operation
         #(CLK_PERIOD*10)
         start_i = 1;
