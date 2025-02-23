@@ -1,9 +1,3 @@
-// Author: Le Vu Trung Duong
-// Nara Institute of Science and Technology
-// Description: Counter 10-bit
-
-`include "common.vh"
-
 module counter (
     input  wire                      CLK,
     input  wire                      RST,
