@@ -37,7 +37,7 @@
 
 int main() {
 
-    printf("Hello World\n");
+    printf("Hello World Today Is Monday\n");
 
     // Mở FPGA
     
@@ -62,17 +62,15 @@ int main() {
 
     // Test DMA
 
-    A_DMA[0] = 1248;
-    B_DMA[0] = 2331;
-    X_DMA[0] = 3;
+    A_DMA[0] = 4721;
+    B_DMA[0] = 2648;
+    X_DMA[0] = 5;
 
     printf("DMA Test\n");
 
     printf("Expected Output = A*X + B = %d\n", A_DMA[0]*X_DMA[0] + B_DMA[0]);
-
-    dma_write(A_DMA_BASE , 1);
-    dma_write(B_DMA_BASE , 1);
-    dma_write(X_DMA_BASE , 1);
+    dma_write(A_DMA_BASE , 6); // dma_write(B_DMA_BASE , 1);
+   // dma_write(X_DMA_BASE , 1);
 
     dma_read(O_DMA_BASE, 1);
 
@@ -81,14 +79,20 @@ int main() {
     // Test PIO
 
     printf("PIO Test\n");
+   
+    int a_temp, b_temp, x_temp;
+
+    a_temp = 8721;
+    b_temp = 1035;
+    x_temp = 6; 
     
-    *A_PIO = 4325;
-    *B_PIO = 1479;
-    *X_PIO = 5;
+    A_PIO[0] = a_temp;
+    B_PIO[0] = b_temp;
+    X_PIO[0] = x_temp;
 
-    printf("Expected Output = A*X + B = %d\n", *A_PIO * *X_PIO + *B_PIO);
+    printf("Expected Output = A*X + B = %d\n", a_temp*x_temp + b_temp);
 
-    printf("Output from FPGA through PIO = %d\n", *O_PIO);
+    printf("Output from FPGA through PIO = %d\n", O_PIO[0]);
     
     return 0;
 }
