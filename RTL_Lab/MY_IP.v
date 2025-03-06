@@ -15,9 +15,9 @@ module MY_IP #
 		// Width of ID for for write address, write data, read address and read data
 		parameter integer C_S_AXI_ID_WIDTH	= 1,
 		// Width of S_AXI data bus
-		parameter integer C_S_AXI_DATA_WIDTH	= 32,  // Diều chỉnh độ rộng dữ liệu
+		parameter integer C_S_AXI_DATA_WIDTH	= 32,  // Di�?u chỉnh độ rộng dữ liệu
 		// Width of S_AXI address bus
-		parameter integer C_S_AXI_ADDR_WIDTH	= 40,  // Điều chỉnh độ rộng địa chỉ
+		parameter integer C_S_AXI_ADDR_WIDTH	= 40,  // �?i�?u chỉnh độ rộng địa chỉ
 		// Width of optional user defined signal in write address channel
 		parameter integer C_S_AXI_AWUSER_WIDTH	= 0,
 		// Width of optional user defined signal in read address channel
@@ -218,7 +218,7 @@ module MY_IP #
 
 //	localparam integer ADDR_LSB = (C_S_AXI_DATA_WIDTH/32)+ 1;
     //localparam integer ADDR_LSB = C_S_AXI_DATA_WIDTH/32;
-	localparam integer ADDR_LSB = 2;	// Số bit bỏ đi tương ứng với số byte thể hiện độ rộng dữ liệu.				
+	localparam integer ADDR_LSB = 2;	// Số bit b�? đi tương ứng với số byte thể hiện độ rộng dữ liệu.				
 	localparam integer OPT_MEM_ADDR_BITS = 12;
 	localparam integer USER_NUM_MEM = 256;
 	//----------------------------------------------
@@ -241,7 +241,7 @@ module MY_IP #
 	assign S_AXI_BVALID		= axi_bvalid;
 	//assign S_AXI_ARREADY	= axi_arready;
 	//assign S_AXI_RDATA	= axi_rdata; 
-	// Xác định dữ liệu trả về cho master (Vì S_AXI_RDATA delay 1 clock cycle nên cần tạo 1 biến trung gian để lưu trữ địa chỉ đọc delay 1 clock cycle)
+	// Xác định dữ liệu trả v�? cho master (Vì S_AXI_RDATA delay 1 clock cycle nên cần tạo 1 biến trung gian để lưu trữ địa chỉ đ�?c delay 1 clock cycle)
 	
 	//assign S_AXI_RRESP	= axi_rresp;
 	//assign S_AXI_RLAST	= axi_rlast;
@@ -746,14 +746,14 @@ module MY_IP #
 
 	// ILA instance for Debugging
 
-	ila_top ila_top_inst (
-		.clk(S_AXI_ACLK),
-		.probe0(AXI_dina_w), 	// 32-bit
-		.probe1(AXI_addra_w), 	// 10-bit
-		.probe2(AXI_wea_w), 	// 1-bit
-		.probe3(AXI_ena_w), 	// 1-bit
-		.probe4(AXI_dout_w) 	// 32-bit
-	);
+//	ila_top ila_top_inst (
+//		.clk(S_AXI_ACLK),
+//		.probe0(AXI_dina_w), 	// 32-bit
+//		.probe1(AXI_addra_w), 	// 10-bit
+//		.probe2(AXI_wea_w), 	// 1-bit
+//		.probe3(AXI_ena_w), 	// 1-bit
+//		.probe4(AXI_dout_w) 	// 32-bit
+//	);
 	// User logic ends
 
 
