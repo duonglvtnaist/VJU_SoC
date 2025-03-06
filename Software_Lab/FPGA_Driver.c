@@ -27,11 +27,11 @@
 /*  ... fixed */
 #define DMA_MMAP_SIZE	 0x0000000000010000LL
 /*  ... 64KB  */
-#define REG_BASE_PHYS	 0x0000000400000000LL
+#define REG_BASE_PHYS	 0x00000000A0000000LL
 /*  ... fixed */
-#define REG_MMAP_SIZE	 0x0000000100000000LL
+#define REG_MMAP_SIZE	 0x0000000010000000LL
 /*  ... 4GB(including REGS) */
-#define LMM_BASE_PHYS	 0x0000000480000000LL
+#define LMM_BASE_PHYS	 0x00000000A0000000LL // This is based address for DMA transfer
 /*  ... fixed */
 #define DDR_BASE_PHYS	 0x0000000800000000LL
 /*  ... fixed */
@@ -48,7 +48,7 @@
 #define CTX_RC_BASE_IP	 0x0000000002000000LL
 #define CTX_IM_BASE_IP	 0x0000000003000000LL
 ///*** LDM space **///
-#define PADDING_BASE	 0x01000000  // 16MB Ofset to avoid system files
+//#define PADDING_BASE	 0x01000000  // 16MB Ofset to avoid system files
 
 // ROWx base address - Each row used bit [5:15]
 #define ROW0_BASE_PHYS	 (0x00000000 + PADDING_BASE)  
@@ -218,7 +218,7 @@ int fpga_open()
   int  fd_reg;
   int  fd_ddr;
   char *UIO_DMA           = "dma-controller\n";
-  char *UIO_AXI_CGRA     = "CGRA\n";
+  char *UIO_AXI_CGRA     = "MY_IP\n";
   char *UIO_DDR_HIGH      = "ddr_high\n";
   
   // Scan the directory
@@ -257,9 +257,9 @@ int fpga_open()
       // mmap(cache-off) 4KB aligned
 
         
-      CGRA_info.reg_phys = REG_BASE_PHYS; // 0x0000000400000000LL
+      CGRA_info.reg_phys = REG_BASE_PHYS; // 0x00000000A0000000LL
 	  CGRA_info.ctx_pe_offset = CTX_PE_BASE_IP >> 2; // 0x0000000001000000LL >> 2 = 0x0000000000400000LL Revising address for PIO PE CTX transfer 32-bit
-      CGRA_info.pio_32_mmap = (U32*)mmap(NULL, REG_MMAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd_reg, 0); /* 4GB */
+      CGRA_info.pio_32_mmap = (U32*)mmap(NULL, REG_MMAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd_reg, 0); /* 256MB */
       if (CGRA_info.pio_32_mmap == MAP_FAILED) {
 		printf("pio_32_mmap failed. errno=%d\n", errno);
 		return -1;
@@ -377,3 +377,4 @@ void dma_read(U64 Offset, U32 size){
 	      status = ((struct dma_ctrl*)fpga.dma_ctrl)->ZDMA_CH_STATUS & 3;
       } while (status != 0 && status != 3);
 }										   
+
