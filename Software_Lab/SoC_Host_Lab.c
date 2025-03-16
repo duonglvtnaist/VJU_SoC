@@ -1,3 +1,7 @@
+// Created by: Le Vu Trung Duong
+// Created on: 2025-03-06
+// Description: This file is used to test the FPGA driver by sending data to the FPGA and receiving the result back from the FPGA.
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,25 +25,25 @@
 
 #define PADDING_BASE	 0x00100000  //  Offset to avoid system files
 
-#define A_DMA_BASE           0x0000000000+PADDING_BASE  // Địa chỉ sẽ giống dưới phần cứng ở phần thấp. => 0x00_A810_0000  
-#define B_DMA_BASE           0x0000000004+PADDING_BASE  // Địa chỉ sẽ giống dưới phần cứng ở phần thấp. => 0x00_A810_0004 
-#define X_DMA_BASE           0x0000000008+PADDING_BASE  // Địa chỉ sẽ giống dưới phần cứng ở phần thấp. => 0x00_A810_0008 
-#define O_DMA_BASE           0x000000000C+PADDING_BASE  // Địa chỉ sẽ giống dưới phần cứng ở phần thấp. => 0x00_A810_000C
+#define A_DMA_BASE           0x0000000000+PADDING_BASE  // Địa chỉ sẽ giống dưới phần cứng ở phần thấp. => 0x00_A010_0000  
+#define B_DMA_BASE           0x0000000004+PADDING_BASE  // Địa chỉ sẽ giống dưới phần cứng ở phần thấp. => 0x00_A010_0004 
+#define X_DMA_BASE           0x0000000008+PADDING_BASE  // Địa chỉ sẽ giống dưới phần cứng ở phần thấp. => 0x00_A010_0008 
+#define O_DMA_BASE           0x000000000C+PADDING_BASE  // Địa chỉ sẽ giống dưới phần cứng ở phần thấp. => 0x00_A010_000C
 
 
 // PIO Address define
 
-#define A_PIO_BASE           0x0000000000
-#define B_PIO_BASE           0x0000000001
-#define X_PIO_BASE           0x0000000002
-#define O_PIO_BASE           0x0000000003
+#define A_PIO_BASE           0x0000000000               // Địa chỉ sẽ bị dịch trái 2 bit vì truyền nhận 32 bit => 0x00_A000_0000
+#define B_PIO_BASE           0x0000000001               // Địa chỉ sẽ bị dịch trái 2 bit vì truyền nhận 32 bit => 0x00_A000_0004
+#define X_PIO_BASE           0x0000000002               // Địa chỉ sẽ bị dịch trái 2 bit vì truyền nhận 32 bit => 0x00_A000_0008
+#define O_PIO_BASE           0x0000000003               // Địa chỉ sẽ bị dịch trái 2 bit vì truyền nhận 32 bit => 0x00_A000_000C
 
 
 int main() {
 
-    printf("Hello World Today Is Monday\n");
+    printf("Hello World! Today Is Monday\n");
 
-    // Mở FPGA
+    // Mở FPGA và các UIO cần thiết
     
     unsigned char* membase;
     if (fpga_open() == 0)
@@ -48,19 +52,14 @@ int main() {
     fpga.dma_ctrl = CGRA_info.dma_mmap;
     membase = (unsigned char*)CGRA_info.ddr_mmap;
 
-    //Khai báo vùng con trỏ trên FPGA
+    // Test DMA
 
+    //Khai báo vùng con trỏ trên FPGA
+    
     uint32_t* A_DMA   =   (uint32_t*)(membase + A_DMA_BASE);
     uint32_t* B_DMA   =   (uint32_t*)(membase + B_DMA_BASE);
     uint32_t* X_DMA   =   (uint32_t*)(membase + X_DMA_BASE);
     uint32_t* O_DMA   =   (uint32_t*)(membase + O_DMA_BASE);
-
-    uint32_t* A_PIO   =   (uint32_t*)(CGRA_info.pio_32_mmap + A_PIO_BASE);
-    uint32_t* B_PIO   =   (uint32_t*)(CGRA_info.pio_32_mmap + B_PIO_BASE);
-    uint32_t* X_PIO   =   (uint32_t*)(CGRA_info.pio_32_mmap + X_PIO_BASE);
-    uint32_t* O_PIO   =   (uint32_t*)(CGRA_info.pio_32_mmap + O_PIO_BASE);
-
-    // Test DMA
 
     A_DMA[0] = 4721;
     B_DMA[0] = 2648;
@@ -69,14 +68,22 @@ int main() {
     printf("DMA Test\n");
 
     printf("Expected Output = A*X + B = %d\n", A_DMA[0]*X_DMA[0] + B_DMA[0]);
-    dma_write(A_DMA_BASE , 6); // dma_write(B_DMA_BASE , 1);
-   // dma_write(X_DMA_BASE , 1);
+    dma_write(A_DMA_BASE , 1); 
+    dma_write(B_DMA_BASE , 1);
+    dma_write(X_DMA_BASE , 1);
 
     dma_read(O_DMA_BASE, 1);
 
     printf("Output from FPGA through DMA = %d\n", O_DMA[0]);
 
     // Test PIO
+
+    //Khai báo vùng con trỏ trên FPGA
+
+    uint32_t* A_PIO   =   (uint32_t*)(CGRA_info.pio_32_mmap + A_PIO_BASE);
+    uint32_t* B_PIO   =   (uint32_t*)(CGRA_info.pio_32_mmap + B_PIO_BASE);
+    uint32_t* X_PIO   =   (uint32_t*)(CGRA_info.pio_32_mmap + X_PIO_BASE);
+    uint32_t* O_PIO   =   (uint32_t*)(CGRA_info.pio_32_mmap + O_PIO_BASE);
 
     printf("PIO Test\n");
    

@@ -1,3 +1,7 @@
+// Created by: Le Vu Trung Duong
+// Created on: 2025-03-06
+// Description: This file includes the FPGA driver functions to interact with the FPGA.
+
 
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -48,7 +52,7 @@
 #define CTX_RC_BASE_IP	 0x0000000002000000LL
 #define CTX_IM_BASE_IP	 0x0000000003000000LL
 ///*** LDM space **///
-#define PADDING_BASE	 0x01000000  // 16MB Ofset to avoid system files
+// #define PADDING_BASE	 0x01000000  // 16MB Ofset to avoid system files
 
 // ROWx base address - Each row used bit [5:15]
 #define ROW0_BASE_PHYS	 (0x00000000 + PADDING_BASE)  

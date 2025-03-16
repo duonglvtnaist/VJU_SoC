@@ -1,3 +1,7 @@
+// Created by: Le Vu Trung Duong
+// Created on: 2025-03-06
+// Description: This file includes the FPGA driver functions to interact with the FPGA.
+
 
 #include <sys/types.h>
 #include <sys/mman.h>

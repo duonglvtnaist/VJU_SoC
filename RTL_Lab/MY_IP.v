@@ -15,9 +15,9 @@ module MY_IP #
 		// Width of ID for for write address, write data, read address and read data
 		parameter integer C_S_AXI_ID_WIDTH	= 1,
 		// Width of S_AXI data bus
-		parameter integer C_S_AXI_DATA_WIDTH	= 32,  // Di�?u chỉnh độ rộng dữ liệu
+		parameter integer C_S_AXI_DATA_WIDTH	= 32,  // Di�?u chỉnh độ rộng dữ liệu
 		// Width of S_AXI address bus
-		parameter integer C_S_AXI_ADDR_WIDTH	= 40,  // �?i�?u chỉnh độ rộng địa chỉ
+		parameter integer C_S_AXI_ADDR_WIDTH	= 40,  // �?i�?u chỉnh độ rộng địa chỉ
 		// Width of optional user defined signal in write address channel
 		parameter integer C_S_AXI_AWUSER_WIDTH	= 0,
 		// Width of optional user defined signal in read address channel
@@ -218,7 +218,7 @@ module MY_IP #
 
 //	localparam integer ADDR_LSB = (C_S_AXI_DATA_WIDTH/32)+ 1;
     //localparam integer ADDR_LSB = C_S_AXI_DATA_WIDTH/32;
-	localparam integer ADDR_LSB = 2;	// Số bit b�? đi tương ứng với số byte thể hiện độ rộng dữ liệu.				
+	localparam integer ADDR_LSB = 2;	// Số bit b�? đi tương ứng với số byte thể hiện độ rộng dữ liệu.				
 	localparam integer OPT_MEM_ADDR_BITS = 12;
 	localparam integer USER_NUM_MEM = 256;
 	//----------------------------------------------
@@ -241,7 +241,7 @@ module MY_IP #
 	assign S_AXI_BVALID		= axi_bvalid;
 	//assign S_AXI_ARREADY	= axi_arready;
 	//assign S_AXI_RDATA	= axi_rdata; 
-	// Xác định dữ liệu trả v�? cho master (Vì S_AXI_RDATA delay 1 clock cycle nên cần tạo 1 biến trung gian để lưu trữ địa chỉ đ�?c delay 1 clock cycle)
+	// Xác định dữ liệu trả v�? cho master (Vì S_AXI_RDATA delay 1 clock cycle nên cần tạo 1 biến trung gian để lưu trữ địa chỉ đ�?c delay 1 clock cycle)
 	
 	//assign S_AXI_RRESP	= axi_rresp;
 	//assign S_AXI_RLAST	= axi_rlast;
@@ -699,8 +699,7 @@ module MY_IP #
 	assign AXI_ena_w = AXI_ena_r;
 	assign AXI_wea_w = AXI_wea_r;
 
-
-
+	// This is for controlling write and read channel in AXI
 	always @(posedge S_AXI_ACLK or negedge S_AXI_ARESETN) begin
 	   	if (S_AXI_ARESETN == 1'b0) begin
 	       	AXI_addra_r	 		<= `ADDR_WIDTH'd0;
@@ -709,12 +708,14 @@ module MY_IP #
 			AXI_wea_r	 		<= 1'b0;
 	   	end
 	   	else begin
+			// Managing write channel
 			if(S_AXI_WREADY && axi_awv_awr_flag && (axi_awaddr[39:28] == 12'h00_A)) begin
 	       		AXI_addra_r 		<= axi_awaddr[ADDR_LSB+`ADDR_WIDTH-1:ADDR_LSB]; // load data address
 				AXI_dina_r	 		<= S_AXI_WDATA;
 				AXI_ena_r	 		<= axi_awv_awr_flag;
 				AXI_wea_r	 		<= axi_awv_awr_flag;
 			end
+			// Managing read channel
 			else if (axi_arv_arr_flag && (axi_araddr[39:28] == 12'h00_A)) begin
 				AXI_addra_r 		<= axi_araddr[ADDR_LSB+`ADDR_WIDTH-1:ADDR_LSB]; // load data address
 				AXI_dina_r	 		<= `AXI_DATA_WIDTH'd0;
@@ -723,17 +724,17 @@ module MY_IP #
 	   		end
 			else begin
 				AXI_addra_r	 		<= `ADDR_WIDTH'd0;
-		   		AXI_dina_r	 		<= `AXI_DATA_WIDTH'd0;
+		   	AXI_dina_r	 		<= `AXI_DATA_WIDTH'd0;
 				AXI_ena_r	 		<= 1'b0;
 				AXI_wea_r	 		<= 1'b0;
 			end
 		end
 	end
-
 	 														   
 	// Assign read data
 	assign S_AXI_RDATA		= AXI_dout_w;
 
+	// User logic
 	compute compute_inst (
 		.CLK(S_AXI_ACLK),
 		.RST(S_AXI_ARESETN),
@@ -746,15 +747,13 @@ module MY_IP #
 
 	// ILA instance for Debugging
 
-//	ila_top ila_top_inst (
-//		.clk(S_AXI_ACLK),
-//		.probe0(AXI_dina_w), 	// 32-bit
-//		.probe1(AXI_addra_w), 	// 10-bit
-//		.probe2(AXI_wea_w), 	// 1-bit
-//		.probe3(AXI_ena_w), 	// 1-bit
-//		.probe4(AXI_dout_w) 	// 32-bit
-//	);
-	// User logic ends
-
+	ila_top ila_top_inst (
+		.clk(S_AXI_ACLK),
+		.probe0(AXI_dina_w), 	// 32-bit
+		.probe1(AXI_addra_w), 	// 10-bit
+		.probe2(AXI_wea_w), 	// 1-bit
+		.probe3(AXI_ena_w), 	// 1-bit
+		.probe4(AXI_dout_w) 	// 32-bit
+	);
 
 endmodule

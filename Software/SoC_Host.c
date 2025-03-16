@@ -1,3 +1,8 @@
+// Created by: Le Vu Trung Duong
+// Created on: 2025-03-06
+// Description: This file is used to test the FPGA driver by sending data to the FPGA and receiving the result back from the FPGA.
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
