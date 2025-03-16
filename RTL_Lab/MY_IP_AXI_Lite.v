@@ -1,4 +1,3 @@
-
 	// Design by: Le Vu Trung Duong
 	// Date: 2025-03-16
 	// Description: This is the AXI4 Lite interface for the MY_IP IP core
@@ -124,7 +123,6 @@
 	assign S_AXI_BRESP		= axi_bresp;
 	assign S_AXI_BVALID		= axi_bvalid;
 	assign S_AXI_ARREADY	= axi_arready;
-	assign S_AXI_RDATA		= AXI_dout_w;
 	// assign S_AXI_RDATA	= axi_rdata;
 	assign S_AXI_RRESP		= axi_rresp;
 	assign S_AXI_RVALID		= axi_rvalid;
@@ -406,21 +404,21 @@
 
 	reg [`ADDR_WIDTH-1:0]          						AXI_addra_r;
 	reg [`AXI_DATA_WIDTH-1:0]       					AXI_dina_r;
-	reg 					              							AXI_ena_r;
-	reg 					              							AXI_wea_r;
+	reg 					              				AXI_ena_r;
+	reg 					              				AXI_wea_r;
 
 
 	wire [`ADDR_WIDTH-1:0]          					AXI_addra_w;
 	wire [`AXI_DATA_WIDTH-1:0]       					AXI_dina_w;
-	wire 					              							AXI_ena_w;
-	wire 					              							AXI_wea_w;
+	wire 					              				AXI_ena_w;
+	wire 					              				AXI_wea_w;
 
-	wire [`AXI_DATA_WIDTH-1:0]								AXI_dout_w;
+	wire [`AXI_DATA_WIDTH-1:0]							AXI_dout_w;
 
 
 
-	assign AXI_addra_w 	= AXI_addra_r	;
-	assign AXI_dina_w 	= AXI_dina_r	;
+	assign AXI_addra_w 		= AXI_addra_r	;
+	assign AXI_dina_w 		= AXI_dina_r	;
 	assign AXI_ena_w 		= AXI_ena_r		;
 	assign AXI_wea_w 		= AXI_wea_r		;
 
@@ -430,8 +428,8 @@
 	always @( posedge S_AXI_ACLK or negedge S_AXI_ARESETN )
 	begin
 		if (S_AXI_ARESETN == 1'b0) begin
-			AXI_addra_r	 		<= 		`ADDR_WIDTH'h0;
-			AXI_dina_r	 		<= 		`AXI_DATA_WIDTH'h0;
+			AXI_addra_r	 			<= 		`ADDR_WIDTH'h0;
+			AXI_dina_r	 			<= 		`AXI_DATA_WIDTH'h0;
 			AXI_ena_r	 			<= 		1'b0;
 			AXI_wea_r	 			<= 		1'b0;
 		end
@@ -441,40 +439,40 @@
 				if (axi_awaddr[39:28] == 12'h00_A) begin
 					AXI_addra_r	 		<= 		axi_awaddr[ADDR_LSB+`ADDR_WIDTH-1:ADDR_LSB];
 					AXI_dina_r	 		<= 		S_AXI_WDATA;
-					AXI_ena_r	 			<= 		slv_reg_wren;
-					AXI_wea_r	 			<= 		slv_reg_wren;
+					AXI_ena_r	 		<= 		slv_reg_wren;
+					AXI_wea_r	 		<= 		slv_reg_wren;
 				end
 				else begin
 					AXI_addra_r	 		<= 		`ADDR_WIDTH'h0;
 					AXI_dina_r	 		<= 		`AXI_DATA_WIDTH'h0;
-					AXI_ena_r	 			<= 		1'b0;
-					AXI_wea_r	 			<= 		1'b0;
+					AXI_ena_r	 		<= 		1'b0;
+					AXI_wea_r	 		<= 		1'b0;
 				end
 			end
 			else if (slv_reg_rden) begin
 				if ( axi_araddr[39:28] == 12'h00_A) begin
 					AXI_addra_r	 		<= 		axi_araddr[ADDR_LSB+`ADDR_WIDTH-1:ADDR_LSB];
 					AXI_dina_r	 		<= 		`AXI_DATA_WIDTH'h0;
-					AXI_ena_r	 			<= 		slv_reg_rden;
-					AXI_wea_r	 			<= 		~slv_reg_rden;
+					AXI_ena_r	 		<= 		slv_reg_rden;
+					AXI_wea_r	 		<= 		~slv_reg_rden;
 				end
 				else begin
 					AXI_addra_r	 		<= 		`ADDR_WIDTH'h0;
 					AXI_dina_r	 		<= 		`AXI_DATA_WIDTH'h0;
-					AXI_ena_r	 			<= 		1'b0;
-					AXI_wea_r	 			<= 		1'b0;
+					AXI_ena_r	 		<= 		1'b0;
+					AXI_wea_r	 		<= 		1'b0;
 				end
 			end
 			else begin
 				AXI_addra_r	 		<= 		`ADDR_WIDTH'h0;
 				AXI_dina_r	 		<= 		`AXI_DATA_WIDTH'h0;
-				AXI_ena_r	 			<= 		1'b0;
-				AXI_wea_r	 			<= 		1'b0;
+				AXI_ena_r	 		<= 		1'b0;
+				AXI_wea_r	 		<= 		1'b0;
 			end
 		end
 	end
 
-
+	assign S_AXI_RDATA		= AXI_dout_w;
 
 	// Add user logic here
 	
