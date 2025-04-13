@@ -24,8 +24,8 @@
 
 #define READ_BASE            0x0000100000
 
-#define IN_DMA_BASE          0x0000000000  
-#define OUT_DMA_BASE         IN_DMA_BASE  + READ_BASE
+#define DATA_DMA_BASE          0x0000000000  
+#define OUT_DMA_BASE         DATA_DMA_BASE  + READ_BASE
 
 #define START_PIO_BASE       0x0000040000               // 0x0000000001 << (18-2)       
 #define VALID_PIO_BASE       0x0000040000 + READ_BASE   // 0x0000000001 << (18-2)   
@@ -189,75 +189,68 @@ void write_uint8_matrix_to_hex_txt(const char* filename, uint8_t** data, int wid
 
 int main() {
 
-    printf("Hello World! Today Is Monday\n");
+    printf("KV260: Hello World! Today Is Monday\n");
 
-   // Đọc ảnh đầu vào
+    // Đọc ảnh đầu vào
 
-   int height, width;
-   uint8_t **input = read_pgm("noisyimg.pgm", &height, &width);
-   uint8_t **output = allocate_image(height, width);
+    int height, width;
+    uint8_t **input = read_pgm("Fig2.pgm", &height, &width);
+    uint8_t **output = allocate_image(height, width);
 
-   write_uint8_matrix_to_hex_txt("noisyimg.txt", input, width, height);
+    write_uint8_matrix_to_hex_txt("Fig2.txt", input, width, height);
 
-   printf("Đọc ảnh thành công: %d x %d\n", height, width);
+    printf("Đọc ảnh thành công: %d x %d\n", height, width);
 
-   // Mở FPGA và các UIO cần thiết
+    // Mở FPGA và các UIO cần thiết
    
-   unsigned char* membase;
-   if (fpga_open() == 0)
-       exit(1);
+    unsigned char* membase;
+    if (fpga_open() == 0)
+        exit(1);
 
-   fpga.dma_ctrl = CGRA_info.dma_mmap;
-   membase = (unsigned char*)CGRA_info.ddr_mmap;
+    fpga.dma_ctrl = CGRA_info.dma_mmap;
+    membase = (unsigned char*)CGRA_info.ddr_mmap;
 
-    uint32_t* In_DDR4_DMA = (uint32_t*)(membase + IN_DMA_BASE);
-    uint32_t* Out_DDR4_DMA = (uint32_t*)(membase + IN_DMA_BASE);
+    uint32_t* In_DDR4_DMA  = (uint32_t*)(membase + DATA_DMA_BASE);
+    uint32_t* Out_DDR4_DMA = (uint32_t*)(membase + DATA_DMA_BASE);
 
-   int i, j;
+    int i, j;
 
-
-   for(i = 0; i < height; i++){
-       for(j = 0; j < width; j++){
-           In_DDR4_DMA[i*width+j] = (uint32_t)input[i][j]; // Ghi dữ liệu vào DDR4
-       }
-   }
-
-   dma_write(IN_DMA_BASE, height*width); // Ghi dữ liệu vào FPGA thông qua DMA
-
-   *(CGRA_info.pio_32_mmap + WIDTH_PIO_BASE)  = 430; // Bắt đầu xử lý trên FPGA
-   *(CGRA_info.pio_32_mmap + HEIGHT_PIO_BASE) = 554; // Bắt đầu xử lý trên FPGA
-
-   *(CGRA_info.pio_32_mmap + START_PIO_BASE) = 1; // Bắt đầu xử lý trên FPGA
-
-   printf("VALID_PIO_BASE = %016llx\n", VALID_PIO_BASE);
-
-   while (1)
-   {
-       if (*(CGRA_info.pio_32_mmap + VALID_PIO_BASE) == 1) // Kiểm tra xem FPGA đã xử lý xong chưa
-           break;
-   }
-
-   printf("FPGA đã xử lý xong\n");
-
-   dma_read(IN_DMA_BASE, height*width); // Đọc dữ liệu từ FPGA thông qua DMA
-   
-
-    
-   
-   for(i = 0; i < height; i++){
-       for(j = 0; j < width; j++){
-            output[i][j] = Out_DDR4_DMA[i*width+j];
-            // output[i][j] = *(CGRA_info.pio_32_mmap + READ_BASE + i*width+j);
-            if(i == 0 && j < 20)
-           	   printf("output[%d][%d] = %d\n", i, j, output[i][j]);
+    for(i = 0; i < height; i++){
+        for(j = 0; j < width; j++){
+            In_DDR4_DMA[i*width+j] = (uint32_t)input[i][j]; 
         }
-   }
+    }
+
+    dma_write(DATA_DMA_BASE, height*width); 
+
+    *(CGRA_info.pio_32_mmap + WIDTH_PIO_BASE)  = width; 
+    *(CGRA_info.pio_32_mmap + HEIGHT_PIO_BASE) = height; 
+    *(CGRA_info.pio_32_mmap + START_PIO_BASE) = 1; 
+
+    while (1)
+    {
+        if (*(CGRA_info.pio_32_mmap + VALID_PIO_BASE) == 1) 
+            break;
+    }
+
+    printf("FPGA đã xử lý xong\n");
+
+    dma_read(DATA_DMA_BASE, height*width); 
+    
+    for(i = 0; i < height; i++){
+        for(j = 0; j < width; j++){
+                output[i][j] = Out_DDR4_DMA[i*width+j];
+                // output[i][j] = *(CGRA_info.pio_32_mmap + READ_BASE + i*width+j);
+                if(i == 0 && j < 20)
+                printf("output[%d][%d] = %d\n", i, j, output[i][j]);
+            }
+    }
 
     *(CGRA_info.pio_32_mmap + START_PIO_BASE) = 0;
 
-    write_pgm("removed_noise.pgm", output, height, width);
+    write_pgm("removed_noise_Fig2.pgm", output, height, width);
     // Lệnh Python cần gọi để chuyển pgm thành jpg------------------------------------
-    const char* command = "python pgm_to_jpeg.py removed_noise.pgm removed_noise.jpg";
+    const char* command = "python pgm_to_jpeg.py removed_noise_Fig2.pgm removed_noise_Fig2.jpg";
     int result = system(command);
 
     if (result == -1) {
@@ -267,14 +260,12 @@ int main() {
         printf("Lệnh Python đã được thực thi thành công\n");
     }
     // -------------------------------------------------------------------------------
-    write_uint8_matrix_to_hex_txt("removed_noise.txt", output, width, height);
+    write_uint8_matrix_to_hex_txt("removed_noise_Fig2.txt", output, width, height);
 
     free_image(input, height);
     free_image(output, height);
 
     printf("Finish\n");
 
- 
-   
    return 0;
 }

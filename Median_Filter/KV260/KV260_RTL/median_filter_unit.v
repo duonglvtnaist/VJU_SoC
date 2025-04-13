@@ -30,11 +30,6 @@ module median_filter_unit(
 
     assign start_w = start_r;
 
-    // reg             bram_wea_r, bram_ena_r;
-    
-
-    // assign bram_wea_w = bram_wea_r;
-    // assign bram_ena_w = bram_ena_r;
 
     wire [`MODE_ADDR_WIDTH-1:0] addra_mode_w;
 
@@ -42,48 +37,38 @@ module median_filter_unit(
 
     // Type: 1. BRAM_2p18x8b 2. start_r 3. width_r 4. height_r
     // Type: 1. BRAM_2p18x8b 2. valid_r
+
+    // This block controls the writing of the start_r, width_r, height_r.
     always @(posedge CLK or negedge RST) begin
         if (!RST) begin
             width_r     <= 10'd0;
             height_r    <= 10'd0;
             start_r     <= 1'b0;
-            // bram_wea_r  <= 1'b0;
-            // bram_ena_r  <= 1'b0;
         end
         else begin
             if(ena_i) begin
                 if(wea_i) begin
                     if(addra_mode_w == 2'd0) begin
-                            // bram_ena_r  <= 1'b1;
-                            // bram_wea_r  <= 1'b1;
                             start_r     <= start_w;
                             width_r     <= width_w;
                             height_r    <= height_w;
                     end
                     else if(addra_mode_w == 2'd1) begin
-                        // bram_ena_r  <= 1'b0;
-                        // bram_wea_r  <= 1'b0;
                         start_r     <= dina_i[0:0];
                         width_r     <= width_w;
                         height_r    <= height_w;
                     end
                     else if(addra_mode_w == 2'd2) begin
-                            // bram_ena_r  <= 1'b0;
-                            // bram_wea_r  <= 1'b0;
                             start_r     <= start_w;
                             width_r     <= dina_i[9:0];
                             height_r    <= height_w;
                         end
                     else if(addra_mode_w == 2'd3) begin
-                            // bram_ena_r  <= 1'b0;
-                            // bram_wea_r  <= 1'b0;
                             start_r     <= start_w;
                             width_r     <= width_w;
                             height_r    <= dina_i[9:0];
                         end
                     else begin
-                            // bram_ena_r  <= 1'b0;
-                            // bram_wea_r  <= 1'b0;
                             start_r     <= start_w;
                             width_r     <= width_w;
                             height_r    <= height_w;
@@ -93,36 +78,22 @@ module median_filter_unit(
                     start_r     <= start_w;
                     width_r     <= width_w;
                     height_r    <= height_w;
-                    // case(addra_i[`MODE_ADDR_WIDTH+`ADDR_WIDTH-1:`ADDR_WIDTH]) 
-                    //     2'd0: begin
-                    //         bram_ena_r  <= 1'b1;
-                    //         bram_wea_r  <= 1'b0;
-                    //     end
-                    //     default: begin
-                    //         bram_ena_r  <= 1'b0;
-                    //         bram_wea_r  <= 1'b0;
-                    //     end
-                    // endcase
                 end
                 else begin
                     start_r     <= start_w;
                     width_r     <= width_w;
                     height_r    <= height_w;
-                    // bram_ena_r  <= 1'b0;
-                    // bram_wea_r  <= 1'b0;
                 end
             end
             else begin
                 start_r     <= start_w;
                 width_r     <= width_w;
                 height_r    <= height_w;
-                // bram_ena_r  <= 1'b0;
-                // bram_wea_r  <= 1'b0;
             end
         end
     end
 
-       // Counter for controlling the median filter unit
+    // Counter for controlling the median filter unit
     wire [9:0]  counter_i_w;
     reg         counter_i_increment_r;
     wire        counter_i_increment_w;
@@ -131,8 +102,9 @@ module median_filter_unit(
 
     assign counter_i_increment_w = counter_i_increment_r;
     assign counter_i_clear_w     = counter_i_clear_r;
-
-    counter_10_bit counter_10_bit_inst (
+    
+    // Counter for row index
+    counter_10_bit counter_10_bit_inst_i (
         .CLK(CLK),
         .RST(RST),
         .increment_i(counter_i_increment_w),
@@ -149,6 +121,7 @@ module median_filter_unit(
     assign counter_j_increment_w = counter_j_increment_r;
     assign counter_j_clear_w     = counter_j_clear_r;
 
+    // Counter for column index
     counter_10_bit counter_10_bit_inst_j (
         .CLK(CLK),
         .RST(RST),
@@ -178,6 +151,7 @@ module median_filter_unit(
         .count_o(counter_window_w)
     );
 
+    // This part is the FSM part -----------------------------------------------------
     reg     sel_fsm_r;
     wire    sel_fsm_w;
 
@@ -189,8 +163,6 @@ module median_filter_unit(
     assign fsm_ena_w = fsm_ena_r;
     assign fsm_wea_w = fsm_wea_r;
 
-
-    wire [`BITWIDTH-1:0]   fsm_dina_w;
     
     reg [7:0]           window_r [0:8];
     wire [7:0]          window_w [0:8];
@@ -202,28 +174,20 @@ module median_filter_unit(
         end
     endgenerate
 
-    wire [7:0]             window_out_w [0:8];
-    assign fsm_dina_w =    window_out_w[4];
+    wire [`ADDR_WIDTH-1:0]      fsm_addra_w;
+    wire [`BITWIDTH-1:0]        fsm_dina_w;
+    wire [`BITWIDTH-1:0]        window_out_w [0:8];
 
- 
-    wire [`ADDR_WIDTH-1:0]   fsm_addra_w;
+    // Assign the results of the bubble sort unit (window_out_w[4]) to write the the BRAM
+    assign fsm_dina_w   =       window_out_w[4];
 
+    wire  [`BITWIDTH-1:0]       bram_dina_w;
+    wire  [`ADDR_WIDTH-1:0]     bram_addra_w;
+    wire                        bram_wea_w, bram_ena_w;
 
-    wire  [`BITWIDTH-1:0]     bram_dina_w;
-    wire  [`ADDR_WIDTH-1:0]   bram_addra_w;
-    wire                      bram_wea_w, bram_ena_w;
-    
-    wire  [`BITWIDTH-1:0]     bram_douta_w;
-    wire  [`BITWIDTH-1:0]     bram_douta_out_w;
+    wire  [`BITWIDTH-1:0]       bram_douta_w;
+    wire  [`BITWIDTH-1:0]       bram_douta_out_w;
 
-    // wire  [`BITWIDTH-1:0]     global_douta_w;
-
-    wire                      global_valid_w;
-    reg                       global_valid_r;
-
-    assign global_valid_w = global_valid_r;
-
-    // assign global_douta_w = (addra_i[`MODE_ADDR_WIDTH+`ADDR_WIDTH-1:`ADDR_WIDTH] == 2'd1) ? global_valid_w : bram_douta_out_w;
 
     assign bram_addra_w = (~sel_fsm_w) ? addra_i[`ADDR_WIDTH-1:0]          : fsm_addra_w;
     assign bram_dina_w  = (~sel_fsm_w) ? dina_i[7:0]                       : fsm_dina_w;
@@ -250,33 +214,38 @@ module median_filter_unit(
 
  
     // Control bubble sort unit
+    
+    wire        global_valid_w;
+    reg         global_valid_r;
+
+    assign      global_valid_w = global_valid_r;
 
     reg         start_bubble_sort_r;
     wire        start_bubble_sort_w;
 
-    assign start_bubble_sort_w = start_bubble_sort_r;
+    assign      start_bubble_sort_w = start_bubble_sort_r;
 
     wire        valid_bubble_sort_w;
 
     reg         row_based_clear_r;
     wire        row_based_clear_w;
 
-    assign row_based_clear_w = row_based_clear_r;
+    assign      row_based_clear_w = row_based_clear_r;
 
     reg         row_based_update_r;
     wire        row_based_update_w;
 
-    assign row_based_update_w = row_based_update_r;
+    assign      row_based_update_w = row_based_update_r;
    
-    wire  update_window_w;
-    reg   update_window_r;
+    wire        update_window_w;
+    reg         update_window_r;
 
-    assign update_window_w = update_window_r;
+    assign      update_window_w = update_window_r;
 
-    wire  write_window_w;
-    reg   write_window_r;
+    wire        write_window_w;
+    reg         write_window_r;
 
-    assign write_window_w = write_window_r;
+    assign      write_window_w = write_window_r;
 
     // FSM for controlling the median filter unit
     reg     [1:0]   state_r, next_state_r;
@@ -334,7 +303,7 @@ module median_filter_unit(
         endcase
     end
 
-
+    // Output control logic
 
     always @(state_w or counter_window_w or valid_bubble_sort_w or counter_j_w or width_w) begin
         case(state_w)
@@ -449,11 +418,7 @@ module median_filter_unit(
         endcase
     end
 
-
-
-    
-
-
+    // This block is for calculating the row-based address for the BRAM
 
     reg  [17:0]             row_based_r;
     wire [17:0]             row_based_w;
@@ -476,7 +441,9 @@ module median_filter_unit(
             end
         end
     end
-    wire [18:0] cal_read_addra_w;      
+
+
+    
 
     // Delay counter_window_w by 1 clock cycle
     reg [3:0]  delayed_counter_window_r;
@@ -535,18 +502,25 @@ module median_filter_unit(
 
         .valid_o(valid_bubble_sort_w)
     );
-
     
+       
 
-    wire is_zero_col_w;
-    wire is_zero_row_w;
-    assign is_zero_col_w = ((counter_j_w==10'd0 &          (delayed_counter_window_w==4'd0|delayed_counter_window_w==4'd3|delayed_counter_window_w==4'd6)) | 
-                            (counter_j_w==width_w-8'd1 &  (delayed_counter_window_w==4'd2|delayed_counter_window_w==4'd5|delayed_counter_window_w==4'd8))) ? 1'b1 : 1'b0;
-    assign is_zero_row_w = ((counter_i_w==10'd0 &          (delayed_counter_window_w==4'd0|delayed_counter_window_w==4'd1|delayed_counter_window_w==4'd2)) | 
-                            (counter_i_w==height_w-8'd1 & (delayed_counter_window_w==4'd6|delayed_counter_window_w==4'd7|delayed_counter_window_w==4'd8))) ? 1'b1 : 1'b0;
+    wire    is_zero_col_w;
+    wire    is_zero_row_w;
+
+    // At column 0,       set the zero flag to store the window[0] window[3] window[6] to zero
+    // At column width-1, set the zero flag to store the window[2] window[5] window[8] to zero
+    assign  is_zero_col_w = ((counter_j_w==10'd0         &  (delayed_counter_window_w==4'd0|delayed_counter_window_w==4'd3|delayed_counter_window_w==4'd6)) | 
+                             (counter_j_w==width_w-8'd1  &  (delayed_counter_window_w==4'd2|delayed_counter_window_w==4'd5|delayed_counter_window_w==4'd8))) ? 1'b1 : 1'b0;
+    // At row 0, set the zero flag to store the window[0] window[1] window[2] to zero
+    // At row height-1, set the zero flag to store the window[6] window[7] window[8] to zero
+    assign  is_zero_row_w = ((counter_i_w==10'd0         &  (delayed_counter_window_w==4'd0|delayed_counter_window_w==4'd1|delayed_counter_window_w==4'd2)) | 
+                             (counter_i_w==height_w-8'd1 &  (delayed_counter_window_w==4'd6|delayed_counter_window_w==4'd7|delayed_counter_window_w==4'd8))) ? 1'b1 : 1'b0;
 
 
-    // wire for calculate the condition
+    // Wires for calculate the condition
+
+    wire [18:0] cal_read_addra_w;
 
     assign cal_read_addra_w = (counter_window_w == 4'd0 ) ? {1'b0,row_based_w} - {11'b0, width_w} - 19'd1 + {1'b0, counter_j_w}:
                               (counter_window_w == 4'd1 ) ? {1'b0,row_based_w} - {11'b0, width_w}         + {1'b0, counter_j_w}:
@@ -558,18 +532,18 @@ module median_filter_unit(
                               (counter_window_w == 4'd7 ) ? {1'b0,row_based_w} + {11'b0, width_w}         + {1'b0, counter_j_w}:
                                                             {1'b0,row_based_w} + {11'b0, width_w} + 19'd1 + {1'b0, counter_j_w};
 
-    
 
-    assign fsm_addra_w = (fsm_wea_w) ? row_based_w + counter_j_w : cal_read_addra_w;
-    assign fsm_dina_w = window_out_w[4];
+    assign fsm_addra_w  = (fsm_wea_w) ? row_based_w + counter_j_w : cal_read_addra_w;
+    assign fsm_dina_w   = window_out_w[4];
 
 
-    wire [7:0] cal_bram_douta_w;
+    wire    is_zero_w;
 
-    wire is_zero_w;
-    assign is_zero_w = (is_zero_col_w | is_zero_row_w) ? 1'b1 : 1'b0;
+    assign  is_zero_w           = (is_zero_col_w | is_zero_row_w) ? 1'b1 : 1'b0;
 
-    assign cal_bram_douta_w = (is_zero_w == 1'b0) ? bram_douta_w : 8'd0;
+    wire [7:0]  cal_bram_douta_w;
+
+    assign      cal_bram_douta_w    = (is_zero_w == 1'b0) ? bram_douta_w : 8'd0;
 
     always @(posedge CLK or negedge RST) begin
         if(!RST) begin
@@ -623,7 +597,7 @@ module median_filter_unit(
                         window_r[0] <= window_w[0];
                         window_r[1] <= window_w[1];
                         window_r[2] <= window_w[2];
-                        window_r[3] <= cal_bram_douta_w; // If in the same line -> keep the previous window[4] to window[3]
+                        window_r[3] <= cal_bram_douta_w;
                         window_r[4] <= window_w[4];
                         window_r[5] <= window_w[5];
                         window_r[6] <= window_w[6];
@@ -725,11 +699,11 @@ module median_filter_unit(
 
     wire [`FULLBITWIDTH-1:0] cal_douta_w, cal_douta_valid_w;
 
-    assign cal_douta_w = (global_valid_w) ? {24'd0, bram_douta_out_w} : 32'd0;
+    assign cal_douta_w          = (global_valid_w) ? {24'd0, bram_douta_out_w} : 32'd0;
 
-    assign cal_douta_valid_w = {31'd0, global_valid_w};
+    assign cal_douta_valid_w    = {31'd0, global_valid_w};
 
-    assign douta_o = (addra_mode_w == 2'd1) ? cal_douta_valid_w : cal_douta_w;
+    assign douta_o              = (addra_mode_w == 2'd1) ? cal_douta_valid_w : cal_douta_w;
     
     //  ila_median_filter ila_median_filter_inst (
     //      .clk(CLK),

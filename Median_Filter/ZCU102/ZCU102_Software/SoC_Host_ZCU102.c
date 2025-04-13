@@ -1,12 +1,44 @@
+// Created by: Le Vu Trung Duong
+// Created on: 2025-03-06
+// Description: This file is used to test the FPGA driver by sending data to the FPGA and receiving the result back from the FPGA.
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>  // Để dùng uint8_t
-// #include <windows.h>
+#include <ctype.h>
 
-#define FILTER_SIZE 3
 
-// Hoán đổi giá trị
+#include <fcntl.h>
+#include <stdint.h>
+#include <math.h>
+
+#include "./ZCU102_Driver.c" // call fpga driver
+
+
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+#define SIZE 1024
+
+#define READ_BASE            0x0000100000
+
+#define DATA_DMA_BASE        0x0000000000  
+// #define OUT_DMA_BASE         DATA_DMA_BASE  + READ_BASE
+
+#define START_PIO_BASE       0x0000040000               // 0x0000000001 << (18-2)       
+#define VALID_PIO_BASE       0x0000040000 + READ_BASE   // 0x0000000001 << (18-2)   
+#define WIDTH_PIO_BASE       0x0000080000               // 0x0000000002 << (18-2)          
+#define HEIGHT_PIO_BASE      0x00000C0000               // 0x0000000003 << (18-2)          
+
+
+
+
+#define FILTER_SIZE 3 // Kích thước của bộ lọc (3x3)
+
+
+//  Hoán đổi giá trị
 void swap(uint8_t *a, uint8_t *b) {
     uint8_t temp = *a;
     *a = *b;
@@ -19,7 +51,6 @@ void bubble_sort(uint8_t arr[], int n) {
         for (int j = 0; j < n - i - 1; ++j){
             if (arr[j] > arr[j + 1])
                 swap(&arr[j], &arr[j + 1]);
-            // printf("i = %d, j = %d, \t %d, %d, %d, %d, %d, %d, %d, %d\n", i, j, arr[0], arr[1], arr[2], arr[3], arr[4], arr[5], arr[6], arr[7], arr[8]);
         }
 }
 
@@ -34,9 +65,6 @@ void median_filter(uint8_t **input, uint8_t **output, int height, int width) {
     printf("indexer = %d\n", indexer);
     printf("FILTER_SIZE * FILTER_SIZE = %d\n", FILTER_SIZE * FILTER_SIZE);
     printf("FILTER_SIZE * FILTER_SIZE / 2 = %d\n", FILTER_SIZE * FILTER_SIZE / 2);
-    // indexer = 1; // Chỉ dùng cho ảnh 3x3
-    printf("input[1][0] = %02x\n", input[1][0]);
-    printf("input[1][1] = %02x\n", input[1][1]);
 
     for (int i = 0; i < height; ++i) {
         for (int j = 0; j < width; ++j) {
@@ -46,10 +74,10 @@ void median_filter(uint8_t **input, uint8_t **output, int height, int width) {
                     int ni = i + fi;    // ni = i + fi
                     int nj = j + fj;    // nj = j + fj
 
-                    // if(i == 0 && j == 0) {
-                    //     // printf("input[%d][%d] = %02x\n", ni, nj, input[ni][nj]);
-                    //     printf("ni = %d, nj = %d\n", ni*width, nj);
-                    // }
+                    if((ni < 0) && (nj < 0)){
+                        printf("This is a negative index\n");
+                    }
+
                     if (ni >= 0 && ni < height && nj >= 0 && nj < width) {
                         window[count++] = input[ni][nj];
                     } else {
@@ -57,20 +85,8 @@ void median_filter(uint8_t **input, uint8_t **output, int height, int width) {
                     }
                 }
             }
-            if(i == 0  && j < 20) {
-                int k = 0;
-                printf("window at [%d][%d]: ", i, j);
-                for (k = 0; k < FILTER_SIZE * FILTER_SIZE; ++k) {
-                    printf("%02x ", window[k]);
-                }
-                printf("\n");
-            }
             bubble_sort(window, FILTER_SIZE * FILTER_SIZE);
-
             output[i][j] = window[FILTER_SIZE * FILTER_SIZE / 2];
-            if(i == 553 && j > 420) {
-                printf("output[%d][%d] = %02x\n", i, j, output[i][j]);
-            }
         }
     }
 }
@@ -168,43 +184,92 @@ void write_uint8_matrix_to_hex_txt(const char* filename, uint8_t** data, int wid
     fclose(fp);
 }
 
+// --------------------------------------------------------------------------------
+
+
 int main() {
-    // SetConsoleOutputCP(65001); // Đặt mã hóa UTF-8 cho CMD
-    int height, width;
-    uint8_t **input = read_pgm("noisyimg.pgm", &height, &width);
-    uint8_t **output = allocate_image(height, width);
 
-    write_uint8_matrix_to_hex_txt("noisyimg.txt", input, width, height);
+    printf("Hello World! Today Is Monday\n");
 
-    printf("Đọc ảnh thành công: %d x %d\n", height, width);
+   // Đọc ảnh đầu vào
 
-    median_filter(input, output, height, width);
-    write_pgm("removed_noise.pgm", output, height, width);
+   int height, width;
+   uint8_t **input = read_pgm("Fig2.pgm", &height, &width);
+   uint8_t **output = allocate_image(height, width);
 
-    write_uint8_matrix_to_hex_txt("removed_noise.txt", output, width, height);
+   write_uint8_matrix_to_hex_txt("Fig2.txt", input, width, height);
+
+   printf("Đọc ảnh thành công: %d x %d\n", height, width);
+
+   // Mở FPGA và các UIO cần thiết
+   
+   unsigned char* membase;
+   if (fpga_open() == 0)
+       exit(1);
+
+   fpga.dma_ctrl = CGRA_info.dma_mmap;
+   membase = (unsigned char*)CGRA_info.ddr_mmap;
+
+    uint32_t* In_DDR4_DMA = (uint32_t*)(membase + DATA_DMA_BASE);
+    uint32_t* Out_DDR4_DMA = (uint32_t*)(membase + DATA_DMA_BASE);
+
+   int i, j;
+
+
+   for(i = 0; i < height; i++){
+       for(j = 0; j < width; j++){
+           In_DDR4_DMA[i*width+j] = (uint32_t)input[i][j]; 
+       }
+   }
+
+   dma_write(DATA_DMA_BASE, height*width); 
+
+   *(CGRA_info.pio_32_mmap + WIDTH_PIO_BASE)  = width; 
+   *(CGRA_info.pio_32_mmap + HEIGHT_PIO_BASE) = height; 
+
+   *(CGRA_info.pio_32_mmap + START_PIO_BASE) = 1; 
+
+   printf("VALID_PIO_BASE = %016llx\n", VALID_PIO_BASE);
+
+   while (1)
+   {
+       if (*(CGRA_info.pio_32_mmap + VALID_PIO_BASE) == 1) 
+           break;
+   }
+
+   printf("FPGA đã xử lý xong\n");
+
+//    dma_read(DATA_DMA_BASE, height*width);     
+   
+   for(i = 0; i < height; i++){
+       for(j = 0; j < width; j++){
+            // output[i][j] = Out_DDR4_DMA[i*width+j];
+            output[i][j] = *(CGRA_info.pio_32_mmap + READ_BASE + i*width+j);
+            if(i == 0 && j < 20)
+           	   printf("output[%d][%d] = %d\n", i, j, output[i][j]);
+        }
+   }
+
+    *(CGRA_info.pio_32_mmap + START_PIO_BASE) = 0;
+
+    write_pgm("removed_noise_Fig2.pgm", output, height, width);
+    // Lệnh Python cần gọi để chuyển pgm thành jpg------------------------------------
+    const char* command = "python pgm_to_jpeg.py removed_noise_Fig2.pgm removed_noise_Fig2.jpg";
+    int result = system(command);
+
+    if (result == -1) {
+        printf("Lỗi khi gọi lệnh Python\n");
+        return 1;
+    } else {
+        printf("Lệnh Python đã được thực thi thành công\n");
+    }
+    // -------------------------------------------------------------------------------
+    write_uint8_matrix_to_hex_txt("removed_noise_Fig2.txt", output, width, height);
 
     free_image(input, height);
     free_image(output, height);
 
-    printf("Hoàn thành lọc median và lưu ảnh ra removed_noise.pgm\n");
+    printf("Finish\n");
 
-    // ------------------------------------------------------------------
-    // uint8_t test_array[9] = {9, 3, 7, 1, 4, 6, 8, 2, 5};
-    // int n = 9;
-
-    // printf("Mảng trước khi sắp xếp:\n");
-    // for (int i = 0; i < n; ++i) {
-    //     printf("%d ", test_array[i]);
-    // }
-    // printf("\n");
-
-    // // Gọi hàm bubble_sort
-    // bubble_sort(test_array, n);
-
-    // printf("Mảng sau khi sắp xếp:\n");
-    // for (int i = 0; i < n; ++i) {
-    //     printf("%d ", test_array[i]);
-    // }
-    // printf("\n");
-    return 0;
+   return 0;
 }
