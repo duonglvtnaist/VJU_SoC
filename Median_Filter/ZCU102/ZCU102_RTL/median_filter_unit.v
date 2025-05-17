@@ -787,7 +787,7 @@ module counter_10_bit (
                 count_r <= 10'd0;
             end
             else if (increment_i) begin
-                count_r <= count_r + 1'b1;
+                count_r <= count_r + 10'b1;
             end
             else begin
                 count_r <= count_o;
@@ -816,7 +816,7 @@ module counter_4_bit(
                 count_r <= 4'd0;
             end
             else if (increment_i) begin
-                count_r <= count_r + 1'b1;
+                count_r <= count_r + 4'b1;
             end
             else begin
                 count_r <= count_o;
